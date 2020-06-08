@@ -34,7 +34,20 @@ public class hello_login {
                 JOptionPane.showMessageDialog(null,"欢迎使用图书借阅系统", "登陆成功!", JOptionPane.PLAIN_MESSAGE);
             }
             else {
-                JOptionPane.showMessageDialog(null, "账号或密码错误", "登陆失败。。", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(null, "账号或密码错误", "登陆失败..", JOptionPane.WARNING_MESSAGE);
+            }
+        }
+        );
+
+        register.addActionListener((ActionListener) e-> {
+            String acc = (String) in_account.getText();
+            String keys = (String) in_key.getText();
+            if(check(acc, keys) == true) {
+                JOptionPane.showMessageDialog(null,"账号已经存在,请直接登陆", "注册失败..", JOptionPane.WARNING_MESSAGE);
+            }
+            else {
+                write(acc, keys);
+                JOptionPane.showMessageDialog(null, "请登陆使用本系统", "注册成功!", JOptionPane.PLAIN_MESSAGE);
             }
         }
         );
@@ -50,11 +63,9 @@ public class hello_login {
 
     public static void main(String[] args) {
         hello_login ck = new hello_login();
-        boolean ok = ck.check("1", "1");
-        System.out.println(ok);
     }
 
-    public boolean check(String in_acc, String in_key) {
+    public boolean check(String in_acc, String in_key) { // 检查输入的账号密码是否存在
         String path = "/Users/gongzhaorui/Documents/GitHub/Library-management-system/src/test/java/GUI/account.txt";
         File file = new File(path);
         String account = "", key = "";
@@ -77,5 +88,27 @@ public class hello_login {
             e.printStackTrace();
         }
         return false;
+    }
+
+    public void write(String account, String key) { // 把输入的账号密码写入文件
+        FileWriter fw = null;
+        try {
+            File f = new File("/Users/gongzhaorui/Documents/GitHub/Library-management-system/src/test/java/GUI/account.txt");
+            fw = new FileWriter(f, true);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        PrintWriter pw = new PrintWriter(fw);
+        pw.println(account); pw.println(key);
+        pw.flush();
+        try {
+            fw.flush();
+            pw.close();
+            fw.close();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
