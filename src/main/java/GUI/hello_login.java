@@ -4,16 +4,21 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class hello_login {
     public hello_login() {
+        JFrame f = new JFrame();
         JPanel p = new JPanel();
         JLabel types = new JLabel("图书借阅系统");
         JLabel account = new JLabel("账号: ");
         JLabel key = new JLabel("密码: ");
 
         JTextField in_account = new JTextField(17);
-        JTextField in_key = new JTextField(17);
+        JPasswordField in_key = new JPasswordField(17);
 
         JButton register = new JButton("注册");
         JButton login = new JButton("登陆");
@@ -41,18 +46,17 @@ public class hello_login {
 
         register.addActionListener((ActionListener) e-> {
             String acc = (String) in_account.getText();
-            String keys = (String) in_key.getText();
+            String keys =  String.valueOf(in_key.getPassword()) ;
             if(check(acc, keys) == true) {
                 JOptionPane.showMessageDialog(null,"账号已经存在,请直接登陆", "注册失败..", JOptionPane.WARNING_MESSAGE);
             }
             else {
-                write(acc, keys);
-                JOptionPane.showMessageDialog(null, "请登陆使用本系统", "注册成功!", JOptionPane.PLAIN_MESSAGE);
+                hello_register hr = new hello_register();
+                f.dispose();
             }
         }
         );
 
-        JFrame f = new JFrame();
         GridLayout fl = new GridLayout();
         f.setLayout(fl);
         f.getContentPane().add(p);
@@ -62,49 +66,25 @@ public class hello_login {
     }
 
     public boolean check(String in_acc, String in_key) { // 检查输入的账号密码是否存在
-        String path = "/Users/gongzhaorui/Documents/GitHub/Library-management-system/src/test/java/GUI/account.txt";
-        File file = new File(path);
-        String account = "", key = "";
+        con_sql conSql = new con_sql();
+        Connection conn = conSql.getConn();
+        String name = null;
+        String sql = "SELECT reader_name FROM Reader WHERE account = '" + in_acc + "' AND pwd = '"+ in_key + "'";
+        PreparedStatement pstmt;
+        String s = null;
         try {
-            //构造一个BufferedReader类来读取文件
-            BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
-            String s = null;
-            int i = 0;
-            while((s = br.readLine())!=null) { //使用readLine方法，一次读一行
-                account = s;
-                s = br.readLine();
-                key = s;
-                if(account.equals(in_acc) && key.equals(in_key)) {
-                    return true;
-                }
+            pstmt = (PreparedStatement) conn.prepareStatement(sql);
+            ResultSet rs = pstmt.executeQuery();
+            int col = rs.getMetaData().getColumnCount();
+            if(rs.next()) {
+                s = rs.getString(col);
             }
-            br.close();
+//            System.out.println(col);
         }
-        catch (Exception e) {
+        catch (SQLException e) {
             e.printStackTrace();
         }
-        return false;
-    }
-
-    public void write(String account, String key) { // 把输入的账号密码写入文件
-        FileWriter fw = null;
-        try {
-            File f = new File("/Users/gongzhaorui/Documents/GitHub/Library-management-system/src/test/java/GUI/account.txt");
-            fw = new FileWriter(f, true);
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-        PrintWriter pw = new PrintWriter(fw);
-        pw.println(account); pw.println(key);
-        pw.flush();
-        try {
-            fw.flush();
-            pw.close();
-            fw.close();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
+        if(s == null) return false;
+        return true;
     }
 }
