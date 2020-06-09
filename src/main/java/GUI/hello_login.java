@@ -61,10 +61,6 @@ public class hello_login {
         f.setVisible(true);
     }
 
-    public static void main(String[] args) {
-        hello_login ck = new hello_login();
-    }
-
     public boolean check(String in_acc, String in_key) { // 检查输入的账号密码是否存在
         String path = "/Users/gongzhaorui/Documents/GitHub/Library-management-system/src/test/java/GUI/account.txt";
         File file = new File(path);
