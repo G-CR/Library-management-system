@@ -2,7 +2,6 @@ package GUI;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionListener;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -31,11 +30,13 @@ public class hello_login {
 
         p.add(types); p.add(p1); p.add(p2);p.add(p3);
 
-        login.addActionListener((ActionListener) e-> {
-            String acc = (String) in_account.getText();
-            String keys = (String) in_key.getText();
-            if(check(acc, keys) == true) {
+        login.addActionListener(e-> {
+            String acc = in_account.getText();
+            String keys = String.valueOf(in_key.getPassword());
+            if(check(acc, keys)) {
                 JOptionPane.showMessageDialog(null,"欢迎使用图书借阅系统", "登陆成功!", JOptionPane.PLAIN_MESSAGE);
+                f.dispose();
+                new MainUI();
             }
             else {
                 JOptionPane.showMessageDialog(null, "账号或密码错误", "登陆失败..", JOptionPane.WARNING_MESSAGE);
@@ -43,18 +44,17 @@ public class hello_login {
         }
         );
 
-        register.addActionListener((ActionListener) e-> {
-            String acc = (String) in_account.getText();
+        register.addActionListener(e-> {
+            String acc = in_account.getText();
             String keys =  String.valueOf(in_key.getPassword()) ;
-            if(check(acc, keys) == true) {
+            if(check(acc, keys)) {
                 JOptionPane.showMessageDialog(null,"账号已经存在,请直接登陆", "注册失败..", JOptionPane.WARNING_MESSAGE);
             }
             else {
-                hello_register hr = new hello_register();
+                new hello_register();
                 f.dispose();
             }
-        }
-        );
+        });
 
         GridLayout fl = new GridLayout();
         f.setLayout(fl);
@@ -67,12 +67,11 @@ public class hello_login {
     public boolean check(String in_acc, String in_key) { // 检查输入的账号密码是否存在
         con_sql conSql = new con_sql();
         Connection conn = conSql.getConn();
-        String name = null;
         String sql = "SELECT reader_name FROM Reader WHERE account = '" + in_acc + "' AND pwd = '"+ in_key + "'";
         PreparedStatement pstmt;
         String s = null;
         try {
-            pstmt = (PreparedStatement) conn.prepareStatement(sql);
+            pstmt = conn.prepareStatement(sql);
             ResultSet rs = pstmt.executeQuery();
             int col = rs.getMetaData().getColumnCount();
             if(rs.next()) {
@@ -83,7 +82,6 @@ public class hello_login {
         catch (SQLException e) {
             e.printStackTrace();
         }
-        if(s == null) return false;
-        return true;
+        return s != null;
     }
 }
