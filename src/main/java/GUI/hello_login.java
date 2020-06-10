@@ -36,7 +36,7 @@ public class hello_login {
             if(check(acc, keys)) {
                 JOptionPane.showMessageDialog(null,"欢迎使用图书借阅系统", "登陆成功!", JOptionPane.PLAIN_MESSAGE);
                 f.dispose();
-                new MainUI();
+                new MainUI(acc, keys);
             }
             else {
                 JOptionPane.showMessageDialog(null, "账号或密码错误", "登陆失败..", JOptionPane.WARNING_MESSAGE);

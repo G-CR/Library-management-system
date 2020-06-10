@@ -3,17 +3,20 @@ package GUI;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Vector;
 
 public class MainUI {
     JTable table;
     JScrollPane sc;
-    public MainUI() {
+    public MainUI(String account, String pwd) {
         JFrame f = new JFrame();
         JPanel p = new JPanel();
 
@@ -87,7 +90,6 @@ public class MainUI {
             else if(find_type.equals("出版社")) find_type = "Press";
             else if(find_type.equals("作者")) find_type = "Author";
 
-
             String sql_ = "SELECT ISBN, Book_name, Author, Price, Press, Date_of_publication, Inventory, ty.type_name FROM Book, Types_of_books ty WHERE ty.type_num = Book.Type AND (Price BETWEEN " + low + " AND " + high+ ") AND " + find_type + " LIKE '%" + input + "%'";
             DefaultTableModel dtm1 = new DefaultTableModel();
             dtm1.setColumnIdentifiers(columnNames); // 给书籍信息加上基础信息
@@ -111,6 +113,7 @@ public class MainUI {
                     if(input.equals("")) {
                         table.setModel(dtm);
                     }
+
                 }
             }
             catch (SQLException g) {
@@ -119,7 +122,37 @@ public class MainUI {
             table.setModel(dtm1);
         });
         /*-------------------------------------------------------------------------*/
-        
+
+        // 添加查询借阅情况按钮监听器
+        show.addActionListener(e -> {
+            String sql_ = "SELECT bo.Book_name, bo.ISBN, b.Borrowing_date FROM Borrow b, Reader r, Book bo WHERE bo.ISBN = b.ISBN AND b.ID_num = r.ID_num AND r.account = '" + account +"' AND r.pwd = '" + pwd+ "'";
+            DefaultTableModel dtm1 = new DefaultTableModel();
+            String[] colBorrow = {"书名", "ISBN编号", "借阅日期", "借阅时限"};
+            dtm1.setColumnIdentifiers(colBorrow); // 借阅信息表头
+            PreparedStatement pstmt1;
+            try {
+                pstmt1 = (PreparedStatement) conn.prepareStatement(sql_);
+                ResultSet rs = pstmt1.executeQuery();
+                while(rs.next()) {
+                    Vector v = new Vector();
+                    v.add(rs.getString("bo.Book_name"));
+                    v.add(rs.getString("bo.ISBN"));
+                    v.add(rs.getString("b.Borrowing_date"));
+                    String date = rs.getString("b.Borrowing_date");
+                    Long day = getDay(date);
+                    String y_days = String.valueOf(day-30);
+                    String s_days = String.valueOf(day);
+                    if(day > 30) v.add("逾期"+y_days+"天");
+                    else v.add("剩余"+s_days+"天");
+                    dtm1.addRow(v);
+                }
+            }
+            catch (SQLException g) {
+                g.printStackTrace();
+            }
+            table.setModel(dtm1);
+        });
+
         p.add(title); p.add(p1); p.add(p2); p.add(p3); p.add(sc);
 
         GridLayout fl = new GridLayout();
@@ -128,5 +161,19 @@ public class MainUI {
         f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         f.setSize(450, 450);
         f.setVisible(true);
+    }
+
+    public Long getDay(String date) { // 返回系统日期与借阅日期之间的差值
+        DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        Long days = null;
+        try {
+            Date currentTime = dateFormat.parse(dateFormat.format(new Date()));//现在系统当前时间
+            Date pastTime = dateFormat.parse(date);//过去时间
+            long diff = currentTime.getTime() - pastTime.getTime();
+            days = diff / (1000 * 60 * 60 * 24);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return days;
     }
 }
