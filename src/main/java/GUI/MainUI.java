@@ -39,7 +39,7 @@ public class MainUI {
         JPanel p3 = new JPanel();
         JButton find = new JButton("查询");
         JButton show = new JButton("已借阅书籍");
-        p3.add(find);p3.add(show);
+        p3.add(find); p3.add(show);
 
         // 显示对话框下面的书籍信息
         con_sql conSql = new con_sql();
@@ -105,8 +105,12 @@ public class MainUI {
                     v.add(rs.getString("Date_of_publication"));
                     v.add(rs.getString("Inventory"));
                     v.add(rs.getString("ty.type_name"));
-
                     dtm1.addRow(v);
+
+                    // 如果输入框里面没有任何输入那么就显示全部书籍信息
+                    if(input.equals("")) {
+                        table.setModel(dtm);
+                    }
                 }
             }
             catch (SQLException g) {
@@ -115,8 +119,7 @@ public class MainUI {
             table.setModel(dtm1);
         });
         /*-------------------------------------------------------------------------*/
-
-
+        
         p.add(title); p.add(p1); p.add(p2); p.add(p3); p.add(sc);
 
         GridLayout fl = new GridLayout();
