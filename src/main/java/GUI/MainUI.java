@@ -3,6 +3,8 @@ package GUI;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,9 +18,12 @@ import java.util.Vector;
 public class MainUI {
     JTable table;
     JScrollPane sc;
+    JPopupMenu jpm = new JPopupMenu();
+
     public MainUI(String account, String pwd) {
         JFrame f = new JFrame();
         JPanel p = new JPanel();
+        JMenuItem item0, item1;
 
         JLabel title = new JLabel("图书借阅系统");
 
@@ -74,16 +79,34 @@ public class MainUI {
             e.printStackTrace();
         }
 
-        table = new JTable(dtm);
+        table = new JTable(dtm) {
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            } //表格不允许被编辑
+        };
         sc = new JScrollPane(table);
 
         // 添加查找按钮监听器
         find.addActionListener( e -> {
+            // 添加鼠标右键弹出借阅按钮
+            table.addMouseListener(new MouseAdapter() {
+                public void mouseClicked(MouseEvent e){
+                    if (e.getButton() == MouseEvent.BUTTON3){
+                        //在table显示
+                        jpm = new JPopupMenu();
+                        //表格 的rowAtPoint方法返回坐标所在的行号，参数为坐标类型，
+                        int i = table.rowAtPoint(e.getPoint());
+                        jpm.add(new JMenuItem("借阅此书"));
+                        jpm.show(table, e.getX(), e.getY());
+                    }
+                }
+            });
             String find_type = (String) type.getSelectedItem();
             String input = in_type.getText();
             int low = Integer.valueOf(price1.getText());
             int high = Integer.valueOf(price2.getText());
 
+            assert find_type != null;
             if(find_type.equals("书籍名称")) find_type = "Book_name";
             else if(find_type.equals("ISBN编号")) find_type = "ISBN";
             else if(find_type.equals("书籍种类")) find_type = "Type";
@@ -125,6 +148,20 @@ public class MainUI {
 
         // 添加查询借阅情况按钮监听器
         show.addActionListener(e -> {
+            // 添加鼠标右键弹出借阅按钮
+            table.addMouseListener(new MouseAdapter() {
+                public void mouseClicked(MouseEvent e){
+                    if (e.getButton() == MouseEvent.BUTTON3){
+                        //在table显示
+                        jpm = new JPopupMenu();
+                        //表格 的rowAtPoint方法返回坐标所在的行号，参数为坐标类型，
+                        int i = table.rowAtPoint(e.getPoint());
+                        jpm.add(new JMenuItem("续租此书"));
+                        jpm.add(new JMenuItem("退还此书"));
+                        jpm.show(table, e.getX(), e.getY());
+                    }
+                }
+            });
             String sql_ = "SELECT bo.Book_name, bo.ISBN, b.Borrowing_date FROM Borrow b, Reader r, Book bo WHERE bo.ISBN = b.ISBN AND b.ID_num = r.ID_num AND r.account = '" + account +"' AND r.pwd = '" + pwd+ "'";
             DefaultTableModel dtm1 = new DefaultTableModel();
             String[] colBorrow = {"书名", "ISBN编号", "借阅日期", "借阅时限"};
@@ -152,6 +189,22 @@ public class MainUI {
             }
             table.setModel(dtm1);
         });
+        /*-------------------------------------------------------------------------*/
+
+        // 添加鼠标右键弹出借阅按钮
+        table.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e){
+                if (e.getButton() == MouseEvent.BUTTON3){
+                    //在table显示
+                    jpm = new JPopupMenu();
+                    //表格 的rowAtPoint方法返回坐标所在的行号，参数为坐标类型，
+                    int i = table.rowAtPoint(e.getPoint());
+                    jpm.add(new JMenuItem("借阅此书"));
+                    jpm.show(table, e.getX(), e.getY());
+                }
+            }
+        });
+
 
         p.add(title); p.add(p1); p.add(p2); p.add(p3); p.add(sc);
 

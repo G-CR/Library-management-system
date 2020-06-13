@@ -42,7 +42,7 @@ public class hello_register {
 
         JPanel p6 = new JPanel();
         JLabel Pwd = new JLabel("密码      ");
-        JTextField in_Pwd = new JTextField(17);
+        JPasswordField in_Pwd = new JPasswordField(17);
         p6.add(Pwd); p6.add(in_Pwd);
 
         JButton regi = new JButton("确认注册");
@@ -52,7 +52,7 @@ public class hello_register {
                 String Fsex = (String) in_Sex.getSelectedItem();
                 String Fphone = (String) in_Phone.getText();
                 String Faccount = (String) in_Account.getText();
-                String Fpwd = (String) in_Pwd.getText();
+                String Fpwd = String.valueOf(in_Pwd.getPassword());
 
                 con_sql conSql = new con_sql();
                 Connection conn = conSql.getConn();
