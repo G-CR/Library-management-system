@@ -18,12 +18,15 @@ import java.util.Vector;
 public class MainUI {
     JTable table;
     JScrollPane sc;
-    JPopupMenu jpm = new JPopupMenu();
+    JPopupMenu jpm;
+    JMenuItem item0 = new JMenuItem("借阅此书");
+    JMenuItem item1 = new JMenuItem("续租此书");
+    JMenuItem item2 = new JMenuItem("归还此书");
 
     public MainUI(String account, String pwd) {
         JFrame f = new JFrame();
         JPanel p = new JPanel();
-        JMenuItem item0, item1;
+        final JMenuItem[] Items = new JMenuItem[3];
 
         JLabel title = new JLabel("图书借阅系统");
 
@@ -88,19 +91,6 @@ public class MainUI {
 
         // 添加查找按钮监听器
         find.addActionListener( e -> {
-            // 添加鼠标右键弹出借阅按钮
-            table.addMouseListener(new MouseAdapter() {
-                public void mouseClicked(MouseEvent e){
-                    if (e.getButton() == MouseEvent.BUTTON3){
-                        //在table显示
-                        jpm = new JPopupMenu();
-                        //表格 的rowAtPoint方法返回坐标所在的行号，参数为坐标类型，
-                        int i = table.rowAtPoint(e.getPoint());
-                        jpm.add(new JMenuItem("借阅此书"));
-                        jpm.show(table, e.getX(), e.getY());
-                    }
-                }
-            });
             String find_type = (String) type.getSelectedItem();
             String input = in_type.getText();
             int low = Integer.valueOf(price1.getText());
@@ -156,8 +146,8 @@ public class MainUI {
                         jpm = new JPopupMenu();
                         //表格 的rowAtPoint方法返回坐标所在的行号，参数为坐标类型，
                         int i = table.rowAtPoint(e.getPoint());
-                        jpm.add(new JMenuItem("续租此书"));
-                        jpm.add(new JMenuItem("退还此书"));
+                        jpm.add(item1);
+                        jpm.add(item2);
                         jpm.show(table, e.getX(), e.getY());
                     }
                 }
@@ -199,7 +189,7 @@ public class MainUI {
                     jpm = new JPopupMenu();
                     //表格 的rowAtPoint方法返回坐标所在的行号，参数为坐标类型，
                     int i = table.rowAtPoint(e.getPoint());
-                    jpm.add(new JMenuItem("借阅此书"));
+                    jpm.add(item0);
                     jpm.show(table, e.getX(), e.getY());
                 }
             }
