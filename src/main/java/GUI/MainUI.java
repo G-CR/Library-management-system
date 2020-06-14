@@ -22,12 +22,12 @@ public class MainUI {
     JMenuItem item0 = new JMenuItem("借阅此书");
     JMenuItem item1 = new JMenuItem("续租此书");
     JMenuItem item2 = new JMenuItem("归还此书");
+    int rows;
+    DefaultTableModel dtm2;
 
     public MainUI(String account, String pwd) {
         JFrame f = new JFrame();
         JPanel p = new JPanel();
-        final JMenuItem[] Items = new JMenuItem[3];
-
         JLabel title = new JLabel("图书借阅系统");
 
         // 查找书籍的板板
@@ -59,10 +59,9 @@ public class MainUI {
         String[] columnNames = {"ISBN编号","书名","作者","单价","出版社","出版日期","库存","书籍种类"};
         DefaultTableModel dtm = new DefaultTableModel();
         dtm.setColumnIdentifiers(columnNames); // 给书籍信息加上基础信息
-
         PreparedStatement pstmt;
         try {
-            pstmt = (PreparedStatement) conn.prepareStatement(sql);
+            pstmt = conn.prepareStatement(sql); // 执行sql语句
             ResultSet rs = pstmt.executeQuery();
             while(rs.next()) {
                 Vector v = new Vector();
@@ -91,6 +90,19 @@ public class MainUI {
 
         // 添加查找按钮监听器
         find.addActionListener( e -> {
+            // 添加鼠标右键弹出借阅按钮
+            table.addMouseListener(new MouseAdapter() {
+                public void mouseClicked(MouseEvent e){
+                    if (e.getButton() == MouseEvent.BUTTON3){
+                        //在table显示
+                        jpm = new JPopupMenu();
+                        //表格 的rowAtPoint方法返回坐标所在的行号，参数为坐标类型，
+                        int i = table.rowAtPoint(e.getPoint());
+                        jpm.add(item0);
+                        jpm.show(table, e.getX(), e.getY());
+                    }
+                }
+            });
             String find_type = (String) type.getSelectedItem();
             String input = in_type.getText();
             int low = Integer.valueOf(price1.getText());
@@ -153,9 +165,9 @@ public class MainUI {
                 }
             });
             String sql_ = "SELECT bo.Book_name, bo.ISBN, b.Borrowing_date FROM Borrow b, Reader r, Book bo WHERE bo.ISBN = b.ISBN AND b.ID_num = r.ID_num AND r.account = '" + account +"' AND r.pwd = '" + pwd+ "'";
-            DefaultTableModel dtm1 = new DefaultTableModel();
+            dtm2 = new DefaultTableModel();
             String[] colBorrow = {"书名", "ISBN编号", "借阅日期", "借阅时限"};
-            dtm1.setColumnIdentifiers(colBorrow); // 借阅信息表头
+            dtm2.setColumnIdentifiers(colBorrow); // 借阅信息表头
             PreparedStatement pstmt1;
             try {
                 pstmt1 = (PreparedStatement) conn.prepareStatement(sql_);
@@ -171,13 +183,13 @@ public class MainUI {
                     String s_days = String.valueOf(day);
                     if(day > 30) v.add("逾期"+y_days+"天");
                     else v.add("剩余"+s_days+"天");
-                    dtm1.addRow(v);
+                    dtm2.addRow(v);
                 }
             }
             catch (SQLException g) {
                 g.printStackTrace();
             }
-            table.setModel(dtm1);
+            table.setModel(dtm2);
         });
         /*-------------------------------------------------------------------------*/
 
@@ -188,11 +200,90 @@ public class MainUI {
                     //在table显示
                     jpm = new JPopupMenu();
                     //表格 的rowAtPoint方法返回坐标所在的行号，参数为坐标类型，
-                    int i = table.rowAtPoint(e.getPoint());
+                    rows = table.rowAtPoint(e.getPoint());
                     jpm.add(item0);
                     jpm.show(table, e.getX(), e.getY());
                 }
             }
+        });
+
+        // 借阅书籍监听器
+        item0.addActionListener(e -> {
+            Object ISBN = dtm.getValueAt(rows, 0);
+            String id_num = ""; // 身份证号
+            String date_now = ""; // 当前日期
+            String sql_find =  "SELECT COUNT(*) FROM Borrow b, Reader re WHERE b.ID_num = re.ID_num AND re.ID_num = ( SELECT r.ID_num FROM Reader r WHERE r.account = '" + account + "' AND r.pwd = '" + pwd + "')"; // 查询是否借阅过这本书
+            String sql_date = "SELECT ISBN, Borrowing_date FROM Borrow b, Reader re WHERE b.ID_num = re.ID_num AND re.ID_num = ( SELECT r.ID_num FROM Reader r WHERE r.account = '" + account + "' AND r.pwd = '" + pwd + "')"; // 查询书籍的ISBN号对应的借阅日期，检测是否有书籍逾期
+            String sql_num = "SELECT COUNT(*) FROM Borrow WHERE ISBN = '" + ISBN + "'"; // 查询已经借阅的书的数量
+
+            PreparedStatement pre = null;
+            try {
+                // 检测是否可以借书 (检测是否 有逾期书籍未归还 or 借阅书籍超过十本)
+                pre = conn.prepareStatement(sql_date);
+                ResultSet res = pre.executeQuery();
+                boolean ok1 = true, ok2 = true;
+                while(res.next()) {
+                    if(getDay(res.getString("Borrowing_date")) > 30) { // 如果有借阅的书籍超过30天就是逾期了 OK不通过
+                        ok1 = false;
+                        System.out.println(res.getString("Borrowing_date"));
+                        break;
+                    }
+                }
+                if(ok1 == false) { // 有图书逾期的时候的借阅失败弹窗
+                    JOptionPane.showMessageDialog(null,"您有图书已逾期,请先处理再进行图书借阅", "借阅失败", JOptionPane.PLAIN_MESSAGE);
+                }
+                if(ok1 == true) {
+                    pre = conn.prepareStatement(sql_num);
+                    res = pre.executeQuery();
+                    if(res.next()) if(res.getInt("COUNT(*)") > 10) {
+                        ok2 = false;
+                        JOptionPane.showMessageDialog(null,"您借阅的图书超过10本,请先归还再进行借阅", "借阅失败", JOptionPane.PLAIN_MESSAGE);
+                    }
+                }
+
+                if(ok1 == true && ok2 == true) {
+                    pre = conn.prepareStatement(sql_find); // 执行sql语句 搞到需要借阅的书名好存入借阅信息表里面
+                    res = pre.executeQuery();
+
+                    if(res.next()) if(res.getInt("COUNT(*)") > 0) {
+                        JOptionPane.showMessageDialog(null,"您已经借阅过这本书,请选择其他书籍", "借阅失败", JOptionPane.PLAIN_MESSAGE);
+                    }
+                    else {
+                        // 获取这个用户的身份证号 用于添加借阅信息
+                        String sql_id = "SELECT ID_num FROM Reader WHERE account = '" + account + "' AND pwd = '" + pwd + "'";
+                        pre = conn.prepareStatement(sql_id);
+                        res = pre.executeQuery();
+                        if(res.next()) id_num = res.getString("ID_num");
+
+                        // 获取当前日期
+                        DateFormat format=new SimpleDateFormat("yyyy-MM-dd");
+                        Date currentTime = format.parse(format.format(new Date()));//现在系统当前时间
+                        date_now = format.format(currentTime);
+//                        System.out.println(date_now);
+                        String sql_change = "INSERT Borrow VALUES('" + id_num + "', '" + ISBN + "', '" + date_now +"')"; // 借书之后 借阅列表加上借阅信息
+
+                        pre = conn.prepareStatement(sql_change);
+                        pre.execute();
+                        JOptionPane.showMessageDialog(null,"请在一个月以内归还或者续租", "借阅成功", JOptionPane.PLAIN_MESSAGE);
+                    }
+                }
+            } catch (SQLException | ParseException throwables) {
+                throwables.printStackTrace();
+            }
+
+        });
+
+        // 续租书籍监听器
+        item1.addActionListener(e -> {
+            Object ISBN = dtm2.getValueAt(rows,1);
+//            System.out.println(ISBN);
+
+        });
+
+        // 退还书籍监听器
+        item2.addActionListener(e -> {
+            Object ISBN = dtm2.getValueAt(rows,1);
+            System.out.println(ISBN);
         });
 
 
