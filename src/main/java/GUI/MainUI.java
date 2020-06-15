@@ -52,10 +52,12 @@ public class MainUI {
         JButton show = new JButton("已借阅书籍");
         p3.add(find); p3.add(show);
 
-        // 显示对话框下面的书籍信息
+
         con_sql conSql = new con_sql();
         Connection conn = conSql.getConn();
-        String sql = "SELECT ISBN, Book_name, Author, Price, Press, Date_of_publication, Inventory, ty.type_name FROM Book, Types_of_books ty WHERE ty.type_num = Book.Type";
+
+        // 显示对话框下面的书籍信息
+        String sql = "SELECT ISBN, Book_name, Author, Price, Press, Date_of_publication, Inventory, ty.type_name FROM Book, Types_of_books ty WHERE ty.type_num = Book.Type ORDER BY Price";
         String[] columnNames = {"ISBN编号","书名","作者","单价","出版社","出版日期","库存","书籍种类"};
         DefaultTableModel dtm = new DefaultTableModel();
         dtm.setColumnIdentifiers(columnNames); // 给书籍信息加上基础信息
@@ -73,7 +75,6 @@ public class MainUI {
                 v.add(rs.getString("Date_of_publication"));
                 v.add(rs.getString("Inventory"));
                 v.add(rs.getString("ty.type_name"));
-
                 dtm.addRow(v);
             }
         }
@@ -103,6 +104,7 @@ public class MainUI {
                     }
                 }
             });
+
             String find_type = (String) type.getSelectedItem();
             String input = in_type.getText();
             int low = Integer.valueOf(price1.getText());
@@ -115,12 +117,12 @@ public class MainUI {
             else if(find_type.equals("出版社")) find_type = "Press";
             else if(find_type.equals("作者")) find_type = "Author";
 
-            String sql_ = "SELECT ISBN, Book_name, Author, Price, Press, Date_of_publication, Inventory, ty.type_name FROM Book, Types_of_books ty WHERE ty.type_num = Book.Type AND (Price BETWEEN " + low + " AND " + high+ ") AND " + find_type + " LIKE '%" + input + "%'";
+            String sql_ = "SELECT ISBN, Book_name, Author, Price, Press, Date_of_publication, Inventory, ty.type_name FROM Book, Types_of_books ty WHERE ty.type_num = Book.Type AND (Price BETWEEN " + low + " AND " + high+ ") AND " + find_type + " LIKE '%" + input + "%' ORDER BY Price";
             DefaultTableModel dtm1 = new DefaultTableModel();
             dtm1.setColumnIdentifiers(columnNames); // 给书籍信息加上基础信息
             PreparedStatement pstmt1;
             try {
-                pstmt1 = (PreparedStatement) conn.prepareStatement(sql_);
+                pstmt1 = conn.prepareStatement(sql_);
                 ResultSet rs = pstmt1.executeQuery();
                 while(rs.next()) {
                     Vector v = new Vector();
@@ -138,7 +140,6 @@ public class MainUI {
                     if(input.equals("")) {
                         table.setModel(dtm);
                     }
-
                 }
             }
             catch (SQLException g) {
@@ -164,13 +165,14 @@ public class MainUI {
                     }
                 }
             });
+
             String sql_ = "SELECT bo.Book_name, bo.ISBN, b.Borrowing_date FROM Borrow b, Reader r, Book bo WHERE bo.ISBN = b.ISBN AND b.ID_num = r.ID_num AND r.account = '" + account +"' AND r.pwd = '" + pwd+ "'";
             dtm2 = new DefaultTableModel();
             String[] colBorrow = {"书名", "ISBN编号", "借阅日期", "借阅时限"};
             dtm2.setColumnIdentifiers(colBorrow); // 借阅信息表头
             PreparedStatement pstmt1;
             try {
-                pstmt1 = (PreparedStatement) conn.prepareStatement(sql_);
+                pstmt1 = conn.prepareStatement(sql_);
                 ResultSet rs = pstmt1.executeQuery();
                 while(rs.next()) {
                     Vector v = new Vector();
@@ -180,7 +182,7 @@ public class MainUI {
                     String date = rs.getString("b.Borrowing_date");
                     Long day = getDay(date);
                     String y_days = String.valueOf(day-30);
-                    String s_days = String.valueOf(day);
+                    String s_days = String.valueOf(30-day);
                     if(day > 30) v.add("逾期"+y_days+"天");
                     else v.add("剩余"+s_days+"天");
                     dtm2.addRow(v);
@@ -191,6 +193,7 @@ public class MainUI {
             }
             table.setModel(dtm2);
         });
+
         /*-------------------------------------------------------------------------*/
 
         // 添加鼠标右键弹出借阅按钮
@@ -209,10 +212,11 @@ public class MainUI {
 
         // 借阅书籍监听器
         item0.addActionListener(e -> {
-            Object ISBN = dtm.getValueAt(rows, 0);
+            String ISBN = (String) dtm.getValueAt(rows, 0);
+            System.out.println(rows);
             String id_num = ""; // 身份证号
             String date_now = ""; // 当前日期
-            String sql_find =  "SELECT COUNT(*) FROM Borrow b, Reader re WHERE b.ID_num = re.ID_num AND re.ID_num = ( SELECT r.ID_num FROM Reader r WHERE r.account = '" + account + "' AND r.pwd = '" + pwd + "')"; // 查询是否借阅过这本书
+            String sql_find =  "SELECT COUNT(*) FROM Borrow b, Reader re WHERE b.ID_num = re.ID_num AND re.ID_num = ( SELECT r.ID_num FROM Reader r WHERE r.account = '" + account + "' AND r.pwd = '" + pwd + "') AND b.ISBN = '" + ISBN + "'"; // 查询是否借阅过这本书
             String sql_date = "SELECT ISBN, Borrowing_date FROM Borrow b, Reader re WHERE b.ID_num = re.ID_num AND re.ID_num = ( SELECT r.ID_num FROM Reader r WHERE r.account = '" + account + "' AND r.pwd = '" + pwd + "')"; // 查询书籍的ISBN号对应的借阅日期，检测是否有书籍逾期
             String sql_num = "SELECT COUNT(*) FROM Borrow WHERE ISBN = '" + ISBN + "'"; // 查询已经借阅的书的数量
 
@@ -256,34 +260,54 @@ public class MainUI {
                         if(res.next()) id_num = res.getString("ID_num");
 
                         // 获取当前日期
-                        DateFormat format=new SimpleDateFormat("yyyy-MM-dd");
-                        Date currentTime = format.parse(format.format(new Date()));//现在系统当前时间
-                        date_now = format.format(currentTime);
-//                        System.out.println(date_now);
+                        date_now = dateNow();
+                        System.out.println("ISBN = " + ISBN);
                         String sql_change = "INSERT Borrow VALUES('" + id_num + "', '" + ISBN + "', '" + date_now +"')"; // 借书之后 借阅列表加上借阅信息
 
                         pre = conn.prepareStatement(sql_change);
                         pre.execute();
+
+                        table.updateUI();
                         JOptionPane.showMessageDialog(null,"请在一个月以内归还或者续租", "借阅成功", JOptionPane.PLAIN_MESSAGE);
                     }
                 }
             } catch (SQLException | ParseException throwables) {
                 throwables.printStackTrace();
             }
-
         });
 
         // 续租书籍监听器
         item1.addActionListener(e -> {
-            Object ISBN = dtm2.getValueAt(rows,1);
+            String ISBN = (String) dtm2.getValueAt(rows,1);
+            String ID_num = (String) dtm2.getValueAt(rows, 0);
 //            System.out.println(ISBN);
-
+            if(getDay((String) dtm2.getValueAt(rows, 2)) > 30) {
+                JOptionPane.showMessageDialog(null,"该书已经逾期,请先交罚款", "续租提示", JOptionPane.PLAIN_MESSAGE);
+            }
+            String date_now = "";
+            try {
+                date_now = dateNow();
+            } catch (ParseException parseException) {
+                parseException.printStackTrace();
+            }
+            String sql_conti = "UPDATE Borrow SET Borrowing_date = '" + date_now + "' WHERE ISBN = '" + ISBN + "' AND ID_num = ( SELECT ID_num FROM Reader WHERE account = '" + account + "' AND pwd = '" + pwd + "')";
+            try {
+                PreparedStatement pre = conn.prepareStatement(sql_conti);
+                pre.execute();
+                JOptionPane.showMessageDialog(null,"续租成功！", "续租提示", JOptionPane.PLAIN_MESSAGE);
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         });
 
         // 退还书籍监听器
         item2.addActionListener(e -> {
             Object ISBN = dtm2.getValueAt(rows,1);
             System.out.println(ISBN);
+            if(getDay((String) dtm2.getValueAt(rows, 2)) > 30) {
+                JOptionPane.showMessageDialog(null,"该书已经逾期,请先交罚款", "还书提示", JOptionPane.PLAIN_MESSAGE);
+            }
+            
         });
 
 
@@ -309,5 +333,11 @@ public class MainUI {
             e.printStackTrace();
         }
         return days;
+    }
+
+    public String dateNow() throws ParseException {
+        DateFormat format=new SimpleDateFormat("yyyy-MM-dd");
+        Date currentTime = format.parse(format.format(new Date()));//现在系统当前时间
+        return format.format(currentTime);
     }
 }
