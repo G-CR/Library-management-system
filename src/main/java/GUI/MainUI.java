@@ -294,7 +294,7 @@ public class MainUI {
             try {
                 PreparedStatement pre = conn.prepareStatement(sql_conti);
                 pre.execute();
-                JOptionPane.showMessageDialog(null,"续租成功！", "续租提示", JOptionPane.PLAIN_MESSAGE);
+                JOptionPane.showMessageDialog(null,"续租成功！请刷新界面", "续租提示", JOptionPane.PLAIN_MESSAGE);
             } catch (SQLException throwables) {
                 throwables.printStackTrace();
             }
@@ -302,17 +302,33 @@ public class MainUI {
 
         // 退还书籍监听器
         item2.addActionListener(e -> {
-            Object ISBN = dtm2.getValueAt(rows,1);
-            System.out.println(ISBN);
             if(getDay((String) dtm2.getValueAt(rows, 2)) > 30) {
                 JOptionPane.showMessageDialog(null,"该书已经逾期,请先交罚款", "还书提示", JOptionPane.PLAIN_MESSAGE);
             }
-            
+
+            String sql_id = "SELECT ID_num FROM Reader WHERE account = '" + account + "' AND pwd = '" + pwd + "'";
+
+            String id_num = "";
+            try {
+                PreparedStatement pre = conn.prepareStatement(sql_id);
+                ResultSet res = pre.executeQuery();
+                if(res.next()) id_num = res.getString("ID_num");
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
+
+            String sql_return = "DELETE FROM Borrow WHERE ID_num = '" + id_num + "' AND ISBN = '" + dtm2.getValueAt(rows,1) + "'";
+            try {
+                PreparedStatement pre = conn.prepareStatement(sql_return);
+                pre.execute();
+
+                JOptionPane.showMessageDialog(null,"还书成功！请刷新界面", "还书提示", JOptionPane.PLAIN_MESSAGE);
+            } catch (SQLException throwables) {
+                throwables.printStackTrace();
+            }
         });
 
-
         p.add(title); p.add(p1); p.add(p2); p.add(p3); p.add(sc);
-
         GridLayout fl = new GridLayout();
         f.setLayout(fl);
         f.getContentPane().add(p);
