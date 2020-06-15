@@ -57,13 +57,13 @@ public class MainUI {
         Connection conn = conSql.getConn();
 
         // 显示对话框下面的书籍信息
-        String sql = "SELECT ISBN, Book_name, Author, Price, Press, Date_of_publication, Inventory, ty.type_name FROM Book, Types_of_books ty WHERE ty.type_num = Book.Type ORDER BY Price";
+        String sql_all = "CALL sql_all()";
         String[] columnNames = {"ISBN编号","书名","作者","单价","出版社","出版日期","库存","书籍种类"};
         DefaultTableModel dtm = new DefaultTableModel();
         dtm.setColumnIdentifiers(columnNames); // 给书籍信息加上基础信息
         PreparedStatement pstmt;
         try {
-            pstmt = conn.prepareStatement(sql); // 执行sql语句
+            pstmt = conn.prepareStatement(sql_all); // 执行sql语句
             ResultSet rs = pstmt.executeQuery();
             while(rs.next()) {
                 Vector v = new Vector();
@@ -117,12 +117,12 @@ public class MainUI {
             else if(find_type.equals("出版社")) find_type = "Press";
             else if(find_type.equals("作者")) find_type = "Author";
 
-            String sql_ = "SELECT ISBN, Book_name, Author, Price, Press, Date_of_publication, Inventory, ty.type_name FROM Book, Types_of_books ty WHERE ty.type_num = Book.Type AND (Price BETWEEN " + low + " AND " + high+ ") AND " + find_type + " LIKE '%" + input + "%' ORDER BY Price";
+            String sql_search = "SELECT ISBN, Book_name, Author, Price, Press, Date_of_publication, Inventory, ty.type_name FROM Book, Types_of_books ty WHERE ty.type_num = Book.Type AND (Price BETWEEN " + low + " AND " + high+ ") AND " + find_type + " LIKE '%" + input + "%' ORDER BY Price";
             DefaultTableModel dtm1 = new DefaultTableModel();
             dtm1.setColumnIdentifiers(columnNames); // 给书籍信息加上基础信息
             PreparedStatement pstmt1;
             try {
-                pstmt1 = conn.prepareStatement(sql_);
+                pstmt1 = conn.prepareStatement(sql_search);
                 ResultSet rs = pstmt1.executeQuery();
                 while(rs.next()) {
                     Vector v = new Vector();
@@ -166,13 +166,13 @@ public class MainUI {
                 }
             });
 
-            String sql_ = "SELECT bo.Book_name, bo.ISBN, b.Borrowing_date FROM Borrow b, Reader r, Book bo WHERE bo.ISBN = b.ISBN AND b.ID_num = r.ID_num AND r.account = '" + account +"' AND r.pwd = '" + pwd+ "'";
+            String sql_borrow = "CALL sql_borrow('" + account + "','" + pwd + "')";
             dtm2 = new DefaultTableModel();
             String[] colBorrow = {"书名", "ISBN编号", "借阅日期", "借阅时限"};
             dtm2.setColumnIdentifiers(colBorrow); // 借阅信息表头
             PreparedStatement pstmt1;
             try {
-                pstmt1 = conn.prepareStatement(sql_);
+                pstmt1 = conn.prepareStatement(sql_borrow);
                 ResultSet rs = pstmt1.executeQuery();
                 while(rs.next()) {
                     Vector v = new Vector();
@@ -216,9 +216,10 @@ public class MainUI {
             System.out.println(rows);
             String id_num = ""; // 身份证号
             String date_now = ""; // 当前日期
-            String sql_find =  "SELECT COUNT(*) FROM Borrow b, Reader re WHERE b.ID_num = re.ID_num AND re.ID_num = ( SELECT r.ID_num FROM Reader r WHERE r.account = '" + account + "' AND r.pwd = '" + pwd + "') AND b.ISBN = '" + ISBN + "'"; // 查询是否借阅过这本书
-            String sql_date = "SELECT ISBN, Borrowing_date FROM Borrow b, Reader re WHERE b.ID_num = re.ID_num AND re.ID_num = ( SELECT r.ID_num FROM Reader r WHERE r.account = '" + account + "' AND r.pwd = '" + pwd + "')"; // 查询书籍的ISBN号对应的借阅日期，检测是否有书籍逾期
-            String sql_num = "SELECT COUNT(*) FROM Borrow WHERE ISBN = '" + ISBN + "'"; // 查询已经借阅的书的数量
+            String sql_find = "CALL sql_find('" + account + "', '" + pwd + "', '" + ISBN + "')"; // 查询是否借阅过这本书
+            String sql_date = "CALL sql_date('" + account + "', '" + pwd + "')"; // 查询书籍的ISBN号对应的借阅日期，检测是否有书籍逾期
+            String sql_num = "CALL sql_num('" + account + "', '" + pwd + "')"; // 查询这个人借了多少本书
+
 
             PreparedStatement pre = null;
             try {
@@ -239,7 +240,7 @@ public class MainUI {
                 if(ok1 == true) {
                     pre = conn.prepareStatement(sql_num);
                     res = pre.executeQuery();
-                    if(res.next()) if(res.getInt("COUNT(*)") > 10) {
+                    if(res.next()) if(res.getInt("COUNT(*)") >= 10) {
                         ok2 = false;
                         JOptionPane.showMessageDialog(null,"您借阅的图书超过10本,请先归还再进行借阅", "借阅失败", JOptionPane.PLAIN_MESSAGE);
                     }
@@ -254,7 +255,7 @@ public class MainUI {
                     }
                     else {
                         // 获取这个用户的身份证号 用于添加借阅信息
-                        String sql_id = "SELECT ID_num FROM Reader WHERE account = '" + account + "' AND pwd = '" + pwd + "'";
+                        String sql_id = "CALL sql_id('" + account + "', '" + pwd + "')";
                         pre = conn.prepareStatement(sql_id);
                         res = pre.executeQuery();
                         if(res.next()) id_num = res.getString("ID_num");
@@ -262,7 +263,7 @@ public class MainUI {
                         // 获取当前日期
                         date_now = dateNow();
                         System.out.println("ISBN = " + ISBN);
-                        String sql_change = "INSERT Borrow VALUES('" + id_num + "', '" + ISBN + "', '" + date_now +"')"; // 借书之后 借阅列表加上借阅信息
+                        String sql_change = "CALL sql_change('" + id_num + "','" + ISBN + "','" + date_now + "')"; // 借书之后 借阅列表加上借阅信息
 
                         pre = conn.prepareStatement(sql_change);
                         pre.execute();
@@ -290,7 +291,7 @@ public class MainUI {
             } catch (ParseException parseException) {
                 parseException.printStackTrace();
             }
-            String sql_conti = "UPDATE Borrow SET Borrowing_date = '" + date_now + "' WHERE ISBN = '" + ISBN + "' AND ID_num = ( SELECT ID_num FROM Reader WHERE account = '" + account + "' AND pwd = '" + pwd + "')";
+            String sql_conti = "CALL sql_conti('" + date_now + "', '" + ISBN + "', '" + account + "', '" + pwd + "')";
             try {
                 PreparedStatement pre = conn.prepareStatement(sql_conti);
                 pre.execute();
@@ -306,7 +307,7 @@ public class MainUI {
                 JOptionPane.showMessageDialog(null,"该书已经逾期,请先交罚款", "还书提示", JOptionPane.PLAIN_MESSAGE);
             }
 
-            String sql_id = "SELECT ID_num FROM Reader WHERE account = '" + account + "' AND pwd = '" + pwd + "'";
+            String sql_id = "CALL sql_id('" + account + "', '" + pwd + "')";
 
             String id_num = "";
             try {
@@ -317,7 +318,7 @@ public class MainUI {
                 throwables.printStackTrace();
             }
 
-            String sql_return = "DELETE FROM Borrow WHERE ID_num = '" + id_num + "' AND ISBN = '" + dtm2.getValueAt(rows,1) + "'";
+            String sql_return = "CALL sql_return('" + id_num + "', '" + dtm2.getValueAt(rows,1) + "')";
             try {
                 PreparedStatement pre = conn.prepareStatement(sql_return);
                 pre.execute();
